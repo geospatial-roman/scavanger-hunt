@@ -65,7 +65,7 @@
     .show-zone-btn {
       position: fixed;
       top: 10px;
-      right: 10px;          /* moved to top right */
+      right: 10px; /* top-right */
       z-index: 5001;
       background: white;
       border: 1px solid #ddd;
@@ -74,7 +74,6 @@
       font-size: .8rem;
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      transition: background 0.2s;
     }
     .show-zone-btn:hover {
       background: #f3f3f3;
@@ -132,18 +131,24 @@
 ];
 
 
+    // load progress
     let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
+
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // player marker
     let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
       title: "You",
     }).addTo(map);
 
-    let currentZoneCircle = null;
+    // we keep all zone circles here, index-matched to LOCATIONS
+    const zoneCircles = new Array(LOCATIONS.length).fill(null);
+
+    // show first hint immediately
     showHint(LOCATIONS[currentIndex]);
 
     if ("geolocation" in navigator) {
@@ -181,24 +186,70 @@
       alert("Geolocation is not supported in this browser.");
     }
 
+    // check if user entered the current zone
     function checkProximity(userLat, userLng) {
       const target = LOCATIONS[currentIndex];
-      if (!target) return;
+      if (!target) return; // all done
 
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
 
       if (dist <= target.radius) {
+        // ensure the zone is visible on the map
+        ensureZoneCircle(currentIndex, true);
         showHint(target);
+
         currentIndex++;
         localStorage.setItem("huntProgress", currentIndex.toString());
 
-        if (currentZoneCircle) {
-          map.removeLayer(currentZoneCircle);
-          currentZoneCircle = null;
-        }
+        // after advancing, status updates
       }
     }
 
+    // create a circle if it doesn't exist yet
+    // if visited=true, we can color it differently
+    function ensureZoneCircle(index, visited = false) {
+      if (index < 0 || index >= LOCATIONS.length) return;
+
+      // if it already exists, just open its popup
+      if (zoneCircles[index]) {
+        zoneCircles[index].openPopup();
+        return;
+      }
+
+      const loc = LOCATIONS[index];
+      const circle = L.circle([loc.lat, loc.lng], {
+        color: visited ? "#16a34a" : "#2563eb",        // green for visited, blue for 'just shown'
+        fillColor: visited ? "#16a34a33" : "#2563eb33",
+        fillOpacity: 0.4,
+        radius: loc.radius
+      })
+      .addTo(map)
+      .bindPopup(`<b>${loc.name}</b><br>${loc.hint}`);
+
+      // make it clickable to re-open popups
+      circle.on("click", () => {
+        circle.openPopup();
+      });
+
+      zoneCircles[index] = circle;
+
+      // center on it when we just created it
+      map.setView([loc.lat, loc.lng], 17);
+      circle.openPopup();
+    }
+
+    // button: show the CURRENT (next) zone
+    function showCurrentZone() {
+      const target = LOCATIONS[currentIndex];
+      if (!target) {
+        document.getElementById("status").textContent = "Hunt complete 🎉";
+        return;
+      }
+      // create or open the zone for currentIndex
+      ensureZoneCircle(currentIndex, false);
+    }
+
+    // distance helper
     function distanceInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
       const φ1 = lat1 * Math.PI/180;
@@ -206,9 +257,9 @@
       const Δφ = (lat2-lat1) * Math.PI/180;
       const Δλ = (lon2-lon1) * Math.PI/180;
 
-      const a = Math.sin(Δφ/2)**2 +
+      const a = Math.sin(Δφ/2) ** 2 +
                 Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ/2)**2;
+                Math.sin(Δλ/2) ** 2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
       return R * c;
@@ -237,35 +288,7 @@
       }
     }
 
-    // ✅ Show the current zone, clickable for hint
-    function showCurrentZone() {
-      const target = LOCATIONS[currentIndex];
-      if (!target) return;
-
-      // remove previous
-      if (currentZoneCircle) {
-        map.removeLayer(currentZoneCircle);
-      }
-
-      currentZoneCircle = L.circle([target.lat, target.lng], {
-        color: "#2563eb",
-        fillColor: "#2563eb33",
-        fillOpacity: 0.4,
-        radius: target.radius
-      })
-      .addTo(map)
-      .bindPopup(`<b>${target.name}</b><br>${target.hint}`)
-      .openPopup();
-
-      // make the circle clickable to open the popup again
-      currentZoneCircle.on("click", () => {
-        currentZoneCircle.openPopup();
-      });
-
-      // recenter map
-      map.setView([target.lat, target.lng], 17);
-    }
-
+    // expose for button
     window.showCurrentZone = showCurrentZone;
     window.closeHint = closeHint;
   </script>
