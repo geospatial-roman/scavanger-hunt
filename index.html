@@ -138,35 +138,64 @@
   ></script>
   <script>
     const LOCATIONS = [
-      {
-        name: "Start",
-        lat: 48.162493646740266,
-        lng: 11.553500966165672,
-        radius: 40,
-        hint: "Welcome! 🥳 Your first task: go to the big fountain on the square.",
-      },
-      {
-        name: "Fountain",
-        lat: 48.162878837180855,
-        lng: 11.556791416517495,
-        radius: 35,
-        hint: "Nice! Now find the red door nearby and stand in front of it.",
-      },
-      {
-        name: "Red Door",
-        lat: 48.161733624261046,
-        lng: 11.556842230896956,
-        radius: 35,
-        hint: "Almost there! Last stop: go to the café corner.",
-      },
-      {
-        name: "Finish",
-        lat: 48.161800809763136,
-        lng: 11.554399688680215,
-        radius: 30,
-        hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
-      },
-    ];
+  {
+    name: "Start HG",
+    lat: 48.15615305668851,
+    lng: 11.588767033927423,
+    radius: 40,
+    hint: "Chinesischer Turm",
+  },
+  {
+    name: "Chinesischer Turm",
+    lat: 48.15260840964887,
+    lng: 11.592070503257368,
+    radius: 60,
+    hint: "Eisbach",
+  },
+  {
+    name: "Eisbach",
+    lat: 48.143444904588485,
+    lng: 11.58772264788510,
+    radius: 40,
+    hint: "Hofgarten",
+  },
+  {
+    name: "Hofgarten",
+    lat: 48.142935842127585,
+    lng: 11.580050283393602,
+    radius: 30,
+    hint: "Odeonsplatz",
+  },
+  {
+    name: "Odeonsplatz",
+    lat: 48.142062325451676,
+    lng: 11.57751016696055,
+    radius: 50,
+    hint: "Wittelsbacher Platz",
+  },
+  {
+    name: "Wittelsbacher Platz",
+    lat: 48.14332920900223,
+    lng: 11.576131742199184,
+    radius: 40,
+    hint: "Opernplatz",
+  },
+  {
+    name: "Opernplatz",
+    lat: 48.13989862652583,
+    lng: 11.577387310704061,
+    radius: 40,
+    hint: "Klosterwirt",
+  },
+  {
+    name: "Klosterwirt",
+    lat: 48.13858335211532,
+    lng: 11.572168352693478,
+    radius: 40,
+    hint: "Finish 🎉",
+  },
+];
+
 
     // read saved progress (this is the "next" stop index)
     let saved = localStorage.getItem("huntProgress");
@@ -327,28 +356,35 @@
       if (index < 0 || index >= LOCATIONS.length) return;
       const loc = LOCATIONS[index];
 
+      // Define your green tones
+      const borderGreen = "#16a34a";   // solid border
+      const fillGreen = "#16a34a80";   // 50% transparency (#RRGGBBAA form)
+
       if (zoneCircles[index]) {
         if (visited) {
           zoneCircles[index].setStyle({
-            color: "#16a34a",
-            fillColor: "#16a34a22",
-            fillOpacity: 0.25,
+            color: borderGreen,
+            fillColor: fillGreen,
+            fillOpacity: 0.5,
           });
         }
         return;
       }
 
       const circle = L.circle([loc.lat, loc.lng], {
-        color: visited ? "#16a34a" : "#2563eb",
-        fillColor: visited ? "#16a34a22" : "#2563eb33",
-        fillOpacity: 0.3,
-        radius: loc.radius
+        color: visited ? borderGreen : "#2563eb",
+        fillColor: visited ? fillGreen : "#2563eb33",
+        fillOpacity: visited ? 0.5 : 0.3,
+        weight: 2,
+        radius: loc.radius,
       })
       .addTo(map)
       .bindPopup(`<b>${loc.name}</b>`);
+
       circle.on("click", () => showHint(loc));
       zoneCircles[index] = circle;
     }
+
 
     // button: show/hide next zone
     function toggleNextZone() {
