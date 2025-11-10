@@ -5,7 +5,6 @@
   <title>Scavenger Hunt</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -63,12 +62,26 @@
       font-size: .8rem;
       z-index: 5000;
     }
+    .show-zone-btn {
+      position: fixed;
+      top: 60px;
+      left: 10px;
+      z-index: 5001;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: .5rem .7rem;
+      font-size: .75rem;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
   <div class="status-bar" id="status">Waiting for location…</div>
+  <button class="show-zone-btn" onclick="showCurrentZone()">Show next zone</button>
 
   <!-- Hint modal -->
   <div class="hint-popup" id="hintBox">
@@ -77,15 +90,13 @@
     <button onclick="closeHint()">Got it!</button>
   </div>
 
-  <!-- Leaflet JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
   <script>
-    // 1. Define your scavenger hunt locations
-    // radius is in meters.
+
     const LOCATIONS = [
       {
         name: "Start",
@@ -116,37 +127,25 @@
         hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
       },
     ];
+let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
 
-    // Track which index the player is on
-    // If there's saved progress, load it
-    let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
-
-    // 2. Setup the map
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Draw circles for each location (optional, you can hide this for players)
-    LOCATIONS.forEach((loc, i) => {
-      L.circle([loc.lat, loc.lng], {
-        color: i === currentIndex ? "#2563eb" : "#999",
-        fillColor: i === currentIndex ? "#2563eb33" : "#9993",
-        fillOpacity: 0.4,
-        radius: loc.radius
-      }).addTo(map).bindPopup(loc.name);
-    });
-
     // Player marker
     let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
       title: "You",
     }).addTo(map);
 
-    // Show the first hint immediately (on page load) only if we are at start
+    // We'll keep a reference to the currently shown zone circle
+    let currentZoneCircle = null;
+
+    // Show first hint right away
     showHint(LOCATIONS[currentIndex]);
 
-    // 3. Geolocation
     if ("geolocation" in navigator) {
       navigator.geolocation.watchPosition(
         (pos) => {
@@ -158,7 +157,6 @@
           document.getElementById("status").textContent =
             `You are here (accuracy ~${Math.round(accuracy)}m)`;
 
-          // keep map centered a bit at the beginning
           if (!map._userMoved) {
             map.setView([lat, lng]);
           }
@@ -177,32 +175,34 @@
         }
       );
 
-      // detect user moving map, then we stop auto-centering
       map.on("dragstart", () => { map._userMoved = true; });
 
     } else {
       alert("Geolocation is not supported in this browser.");
     }
 
-    // 4. Distance check
     function checkProximity(userLat, userLng) {
       const target = LOCATIONS[currentIndex];
-      if (!target) return; // done
+      if (!target) return;
 
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
-      // console.log("Distance to next:", dist);
 
       if (dist <= target.radius) {
         // reached!
         showHint(target);
         currentIndex++;
         localStorage.setItem("huntProgress", currentIndex.toString());
+
+        // when progressing, remove previous circle
+        if (currentZoneCircle) {
+          map.removeLayer(currentZoneCircle);
+          currentZoneCircle = null;
+        }
       }
     }
 
-    // Haversine (rough) distance in meters
     function distanceInMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371e3; // metres
+      const R = 6371e3;
       const φ1 = lat1 * Math.PI/180;
       const φ2 = lat2 * Math.PI/180;
       const Δφ = (lat2-lat1) * Math.PI/180;
@@ -213,11 +213,9 @@
                 Math.sin(Δλ/2) * Math.sin(Δλ/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-      const d = R * c;
-      return d;
+      return R * c;
     }
 
-    // 5. Hint UI
     function showHint(locationObj) {
       if (!locationObj) return;
       const box = document.getElementById("hintBox");
@@ -225,7 +223,6 @@
       document.getElementById("hintText").textContent = locationObj.hint;
       box.style.display = "block";
 
-      // also update status
       document.getElementById("status").textContent =
         `Unlocked: ${locationObj.name}`;
     }
@@ -234,15 +231,38 @@
       const box = document.getElementById("hintBox");
       box.style.display = "none";
 
-      // if we advanced beyond last location
       if (currentIndex >= LOCATIONS.length) {
-        document.getElementById("status").textContent =
-          "Hunt complete 🎉";
+        document.getElementById("status").textContent = "Hunt complete 🎉";
       } else {
         document.getElementById("status").textContent =
           `Go to: ${LOCATIONS[currentIndex].name}`;
       }
     }
+
+    // NEW: show only the current zone when user clicks the button
+    function showCurrentZone() {
+      const target = LOCATIONS[currentIndex];
+      if (!target) return;
+
+      // remove previous circle if it exists
+      if (currentZoneCircle) {
+        map.removeLayer(currentZoneCircle);
+      }
+
+      currentZoneCircle = L.circle([target.lat, target.lng], {
+        color: "#2563eb",
+        fillColor: "#2563eb33",
+        fillOpacity: 0.4,
+        radius: target.radius
+      }).addTo(map).bindPopup(target.name);
+
+      // center on it so player knows where to go
+      map.setView([target.lat, target.lng], 17);
+    }
+
+    // make it global for the button
+    window.showCurrentZone = showCurrentZone;
+    window.closeHint = closeHint;
   </script>
 </body>
 </html>
