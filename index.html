@@ -64,16 +64,20 @@
     }
     .show-zone-btn {
       position: fixed;
-      top: 60px;
-      left: 10px;
+      top: 10px;
+      right: 10px;          /* moved to top right */
       z-index: 5001;
       background: white;
       border: 1px solid #ddd;
       border-radius: 8px;
-      padding: .5rem .7rem;
-      font-size: .75rem;
+      padding: .5rem .8rem;
+      font-size: .8rem;
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      transition: background 0.2s;
+    }
+    .show-zone-btn:hover {
+      background: #f3f3f3;
     }
   </style>
 </head>
@@ -96,54 +100,50 @@
     crossorigin=""
   ></script>
   <script>
-
     const LOCATIONS = [
-      {
-        name: "Start",
-        lat: 48.162493646740266,  // change to your real coords
-        lng: 11.553500966165672,
-        radius: 40,
-        hint: "Welcome! 🥳 Your first task: go to the big fountain on the square.",
-      },
-      {
-        name: "Fountain",
-        lat: 48.162878837180855,
-        lng: 11.556791416517495,
-        radius: 35,
-        hint: "Nice! Now find the red door nearby and stand in front of it.",
-      },
-      {
-        name: "Red Door",
-        lat: 48.161733624261046,
-        lng: 11.556842230896956,
-        radius: 35,
-        hint: "Almost there! Last stop: go to the café corner.",
-      },
-      {
-        name: "Finish",
-        lat: 48.161800809763136,
-        lng: 11.554399688680215,
-        radius: 30,
-        hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
-      },
-    ];
-let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
+  {
+    name: "Start",
+    lat: 48.162493646740266,  // change to your real coords
+    lng: 11.553500966165672,
+    radius: 40,
+    hint: "Welcome! 🥳 Your first task: go to the big fountain on the square.",
+  },
+  {
+    name: "Fountain",
+    lat: 48.162878837180855,
+    lng: 11.556791416517495,
+    radius: 35,
+    hint: "Nice! Now find the red door nearby and stand in front of it.",
+  },
+  {
+    name: "Red Door",
+    lat: 48.161733624261046,
+    lng: 11.556842230896956,
+    radius: 35,
+    hint: "Almost there! Last stop: go to the café corner.",
+  },
+  {
+    name: "Finish",
+    lat: 48.161800809763136,
+    lng: 11.554399688680215,
+    radius: 30,
+    hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
+  },
+];
 
+
+    let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Player marker
     let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
       title: "You",
     }).addTo(map);
 
-    // We'll keep a reference to the currently shown zone circle
     let currentZoneCircle = null;
-
-    // Show first hint right away
     showHint(LOCATIONS[currentIndex]);
 
     if ("geolocation" in navigator) {
@@ -188,12 +188,10 @@ let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
 
       if (dist <= target.radius) {
-        // reached!
         showHint(target);
         currentIndex++;
         localStorage.setItem("huntProgress", currentIndex.toString());
 
-        // when progressing, remove previous circle
         if (currentZoneCircle) {
           map.removeLayer(currentZoneCircle);
           currentZoneCircle = null;
@@ -208,9 +206,9 @@ let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
       const Δφ = (lat2-lat1) * Math.PI/180;
       const Δλ = (lon2-lon1) * Math.PI/180;
 
-      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+      const a = Math.sin(Δφ/2)**2 +
                 Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                Math.sin(Δλ/2)**2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
       return R * c;
@@ -239,12 +237,12 @@ let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
       }
     }
 
-    // NEW: show only the current zone when user clicks the button
+    // ✅ Show the current zone, clickable for hint
     function showCurrentZone() {
       const target = LOCATIONS[currentIndex];
       if (!target) return;
 
-      // remove previous circle if it exists
+      // remove previous
       if (currentZoneCircle) {
         map.removeLayer(currentZoneCircle);
       }
@@ -254,13 +252,20 @@ let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
         fillColor: "#2563eb33",
         fillOpacity: 0.4,
         radius: target.radius
-      }).addTo(map).bindPopup(target.name);
+      })
+      .addTo(map)
+      .bindPopup(`<b>${target.name}</b><br>${target.hint}`)
+      .openPopup();
 
-      // center on it so player knows where to go
+      // make the circle clickable to open the popup again
+      currentZoneCircle.on("click", () => {
+        currentZoneCircle.openPopup();
+      });
+
+      // recenter map
       map.setView([target.lat, target.lng], 17);
     }
 
-    // make it global for the button
     window.showCurrentZone = showCurrentZone;
     window.closeHint = closeHint;
   </script>
