@@ -65,7 +65,7 @@
     .show-zone-btn {
       position: fixed;
       top: 10px;
-      right: 10px; /* top-right */
+      right: 10px;
       z-index: 5001;
       background: white;
       border: 1px solid #ddd;
@@ -78,12 +78,35 @@
     .show-zone-btn:hover {
       background: #f3f3f3;
     }
+
+    /* progress bar */
+    .progress-wrap {
+      position: fixed;
+      top: 48px; /* just under the status bar */
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(400px, 80vw);
+      background: rgba(0,0,0,0.15);
+      border-radius: 9999px;
+      overflow: hidden;
+      height: 10px;
+      z-index: 5000;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      transition: width .3s ease;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
   <div class="status-bar" id="status">Waiting for location…</div>
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
   <button class="show-zone-btn" onclick="showCurrentZone()">Show next zone</button>
 
   <!-- Hint modal -->
@@ -136,20 +159,43 @@
 
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+// --- Define multiple base maps ---
+const baseLayers = {
+  "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; OpenStreetMap contributors'
+  }),
+
+  "Satellite (ESRI)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    attribution: '&copy; <a href=\"https://www.esri.com/\">Esri</a>, Earthstar Geographics'
+  }),
+
+  "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    attribution: 'Map data: &copy; <a href=\"https://opentopomap.org\">OpenTopoMap</a>'
+  }),
+
+  "Dark Mode": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+  })
+};
+
+// --- Add your default base layer ---
+baseLayers["OpenStreetMap"].addTo(map);
+
+// --- Add a control to switch between them ---
+L.control.layers(baseLayers).addTo(map);
+
 
     // player marker
     let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
       title: "You",
     }).addTo(map);
 
-    // we keep all zone circles here, index-matched to LOCATIONS
+    // store all circles so visited ones stay
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
 
-    // show first hint immediately
+    // show first hint
     showHint(LOCATIONS[currentIndex]);
+    updateProgress();
 
     if ("geolocation" in navigator) {
       navigator.geolocation.watchPosition(
@@ -186,31 +232,26 @@
       alert("Geolocation is not supported in this browser.");
     }
 
-    // check if user entered the current zone
     function checkProximity(userLat, userLng) {
       const target = LOCATIONS[currentIndex];
-      if (!target) return; // all done
+      if (!target) return;
 
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
 
       if (dist <= target.radius) {
-        // ensure the zone is visible on the map
+        // make sure the zone is visible and marked as visited
         ensureZoneCircle(currentIndex, true);
         showHint(target);
 
         currentIndex++;
         localStorage.setItem("huntProgress", currentIndex.toString());
-
-        // after advancing, status updates
+        updateProgress();
       }
     }
 
-    // create a circle if it doesn't exist yet
-    // if visited=true, we can color it differently
     function ensureZoneCircle(index, visited = false) {
       if (index < 0 || index >= LOCATIONS.length) return;
 
-      // if it already exists, just open its popup
       if (zoneCircles[index]) {
         zoneCircles[index].openPopup();
         return;
@@ -218,7 +259,7 @@
 
       const loc = LOCATIONS[index];
       const circle = L.circle([loc.lat, loc.lng], {
-        color: visited ? "#16a34a" : "#2563eb",        // green for visited, blue for 'just shown'
+        color: visited ? "#16a34a" : "#2563eb",
         fillColor: visited ? "#16a34a33" : "#2563eb33",
         fillOpacity: 0.4,
         radius: loc.radius
@@ -226,30 +267,25 @@
       .addTo(map)
       .bindPopup(`<b>${loc.name}</b><br>${loc.hint}`);
 
-      // make it clickable to re-open popups
       circle.on("click", () => {
         circle.openPopup();
       });
 
       zoneCircles[index] = circle;
 
-      // center on it when we just created it
       map.setView([loc.lat, loc.lng], 17);
       circle.openPopup();
     }
 
-    // button: show the CURRENT (next) zone
     function showCurrentZone() {
       const target = LOCATIONS[currentIndex];
       if (!target) {
         document.getElementById("status").textContent = "Hunt complete 🎉";
         return;
       }
-      // create or open the zone for currentIndex
       ensureZoneCircle(currentIndex, false);
     }
 
-    // distance helper
     function distanceInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
       const φ1 = lat1 * Math.PI/180;
@@ -288,7 +324,17 @@
       }
     }
 
-    // expose for button
+    // 🟦 progress bar logic
+    function updateProgress() {
+      const bar = document.getElementById("progressBar");
+      const total = LOCATIONS.length;
+      // currentIndex is the NEXT location to visit, so completed = currentIndex
+      const completed = Math.min(currentIndex, total);
+      const percent = (completed / total) * 100;
+      bar.style.width = percent + "%";
+    }
+
+    // expose
     window.showCurrentZone = showCurrentZone;
     window.closeHint = closeHint;
   </script>
