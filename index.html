@@ -76,7 +76,7 @@
     }
     .progress-wrap {
       position: fixed;
-      top: 48px;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
       width: min(400px, 80vw);
@@ -86,12 +86,34 @@
       height: 10px;
       z-index: 5000;
     }
+
     .progress-bar {
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, #2563eb, #38bdf8);
       transition: width .3s ease;
     }
+    /* Move and style the base layer control */
+    .leaflet-control-layers {
+      margin-bottom: 50px !important;  /* 🟢 space above the progress bar */
+      margin-right: 15px !important;   /* spacing from right edge */
+      border-radius: 10px !important;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
+      background: rgba(255, 255, 255, 0.9) !important;
+      font-size: 0.85rem !important;
+    }
+
+    .leaflet-control-layers-list {
+      padding: 8px 10px !important;
+    }
+
+    .leaflet-control-layers-toggle {
+      width: 36px !important;
+      height: 36px !important;
+      background-size: 20px 20px !important;
+      border-radius: 8px !important;
+    }
+
   </style>
 </head>
 <body>
@@ -168,10 +190,23 @@
       })
     };
     baseLayers["OpenStreetMap"].addTo(map);
-    L.control.layers(baseLayers).addTo(map);
+    L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
 
-    // player marker
-    let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], { title: "You" }).addTo(map);
+
+    // Custom Santa icon
+    const santaIcon = L.icon({
+      iconUrl: 'santa.png',  // path to your image
+      iconSize: [60, 60],    // adjust size to fit nicely on map
+      iconAnchor: [30, 60],  // point of the icon that corresponds to the marker's location
+      popupAnchor: [0, -60], // position of popup relative to icon
+    });
+
+    // Player marker using Santa
+    let playerMarker = L.marker(
+      [LOCATIONS[0].lat, LOCATIONS[0].lng],
+      { icon: santaIcon, title: "You" }
+    ).addTo(map);
+
 
     // permanent zones
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
