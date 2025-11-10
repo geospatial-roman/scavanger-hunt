@@ -75,14 +75,9 @@
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
-    .show-zone-btn:hover {
-      background: #f3f3f3;
-    }
-
-    /* progress bar */
     .progress-wrap {
       position: fixed;
-      top: 48px; /* just under the status bar */
+      top: 48px;
       left: 50%;
       transform: translateX(-50%);
       width: min(400px, 80vw);
@@ -122,7 +117,7 @@
     crossorigin=""
   ></script>
   <script>
-    const LOCATIONS = [
+const LOCATIONS = [
   {
     name: "Start",
     lat: 48.162493646740266,  // change to your real coords
@@ -154,7 +149,7 @@
 ];
 
 
-    // load progress
+    // progress: which location is NEXT
     let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
 
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
@@ -185,16 +180,17 @@ baseLayers["OpenStreetMap"].addTo(map);
 L.control.layers(baseLayers).addTo(map);
 
 
-    // player marker
     let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
       title: "You",
     }).addTo(map);
 
-    // store all circles so visited ones stay
+    // to keep all visible circles
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
 
-    // show first hint
-    showHint(LOCATIONS[currentIndex]);
+    // 🔹 show the first zone right away, styled green & very transparent
+    createStartZone();
+
+    // update progress bar according to saved progress
     updateProgress();
 
     if ("geolocation" in navigator) {
@@ -227,9 +223,27 @@ L.control.layers(baseLayers).addTo(map);
       );
 
       map.on("dragstart", () => { map._userMoved = true; });
-
     } else {
       alert("Geolocation is not supported in this browser.");
+    }
+
+    function createStartZone() {
+      const start = LOCATIONS[0];
+      const circle = L.circle([start.lat, start.lng], {
+        color: "#16a34a",          // green border
+        fillColor: "#16a34a22",    // very transparent green
+        fillOpacity: 0.2,
+        radius: start.radius
+      })
+      .addTo(map)
+      .bindPopup(`<b>Start</b>`);  // label as "Start"
+
+      // clicking the start zone should show the first hint
+      circle.on("click", () => {
+        showHint(start);
+      });
+
+      zoneCircles[0] = circle;
     }
 
     function checkProximity(userLat, userLng) {
@@ -239,7 +253,7 @@ L.control.layers(baseLayers).addTo(map);
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
 
       if (dist <= target.radius) {
-        // make sure the zone is visible and marked as visited
+        // make sure zone is visible
         ensureZoneCircle(currentIndex, true);
         showHint(target);
 
@@ -249,9 +263,11 @@ L.control.layers(baseLayers).addTo(map);
       }
     }
 
+    // create or open a zone circle for given index
     function ensureZoneCircle(index, visited = false) {
       if (index < 0 || index >= LOCATIONS.length) return;
 
+      // already exists → just open popup
       if (zoneCircles[index]) {
         zoneCircles[index].openPopup();
         return;
@@ -260,15 +276,16 @@ L.control.layers(baseLayers).addTo(map);
       const loc = LOCATIONS[index];
       const circle = L.circle([loc.lat, loc.lng], {
         color: visited ? "#16a34a" : "#2563eb",
-        fillColor: visited ? "#16a34a33" : "#2563eb33",
-        fillOpacity: 0.4,
+        fillColor: visited ? "#16a34a22" : "#2563eb33",
+        fillOpacity: 0.3,
         radius: loc.radius
       })
       .addTo(map)
-      .bindPopup(`<b>${loc.name}</b><br>${loc.hint}`);
+      .bindPopup(`<b>${loc.name}</b>`);
 
+      // click to show the hint modal
       circle.on("click", () => {
-        circle.openPopup();
+        showHint(loc);
       });
 
       zoneCircles[index] = circle;
@@ -277,6 +294,7 @@ L.control.layers(baseLayers).addTo(map);
       circle.openPopup();
     }
 
+    // button to show next zone
     function showCurrentZone() {
       const target = LOCATIONS[currentIndex];
       if (!target) {
@@ -302,7 +320,6 @@ L.control.layers(baseLayers).addTo(map);
     }
 
     function showHint(locationObj) {
-      if (!locationObj) return;
       const box = document.getElementById("hintBox");
       document.getElementById("hintTitle").textContent = `Next stop: ${locationObj.name}`;
       document.getElementById("hintText").textContent = locationObj.hint;
@@ -324,14 +341,12 @@ L.control.layers(baseLayers).addTo(map);
       }
     }
 
-    // 🟦 progress bar logic
+    // progress bar: completed = currentIndex
     function updateProgress() {
       const bar = document.getElementById("progressBar");
       const total = LOCATIONS.length;
-      // currentIndex is the NEXT location to visit, so completed = currentIndex
       const completed = Math.min(currentIndex, total);
-      const percent = (completed / total) * 100;
-      bar.style.width = percent + "%";
+      bar.style.width = (completed / total) * 100 + "%";
     }
 
     // expose
