@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Scavenger Hunt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #map {
+      width: 100vw;
+      height: 100vh;
+    }
+    .hint-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 9999;
+      max-width: 90vw;
+      padding: 1.2rem 1.4rem 1rem;
+      display: none;
+    }
+    .hint-popup h2 {
+      margin: 0 0 .5rem;
+      font-size: 1.25rem;
+    }
+    .hint-popup p {
+      margin: 0 0 1rem;
+    }
+    .hint-popup button {
+      border: none;
+      background: #2563eb;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .status-bar {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      padding: .4rem .8rem;
+      border-radius: 9999px;
+      font-size: .8rem;
+      z-index: 5000;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="status-bar" id="status">Waiting for location…</div>
+
+  <!-- Hint modal -->
+  <div class="hint-popup" id="hintBox">
+    <h2 id="hintTitle">Hint</h2>
+    <p id="hintText"></p>
+    <button onclick="closeHint()">Got it!</button>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    // 1. Define your scavenger hunt locations
+    // radius is in meters.
+    const LOCATIONS = [
+      {
+        name: "Start",
+        lat: 48.162493646740266,  // change to your real coords
+        lng: 11.553500966165672,
+        radius: 40,
+        hint: "Welcome! 🥳 Your first task: go to the big fountain on the square.",
+      },
+      {
+        name: "Fountain",
+        lat: 48.162878837180855,
+        lng: 11.556791416517495,
+        radius: 35,
+        hint: "Nice! Now find the red door nearby and stand in front of it.",
+      },
+      {
+        name: "Red Door",
+        lat: 48.161733624261046,
+        lng: 11.556842230896956,
+        radius: 35,
+        hint: "Almost there! Last stop: go to the café corner.",
+      },
+      {
+        name: "Finish",
+        lat: 48.161800809763136,
+        lng: 11.554399688680215,
+        radius: 30,
+        hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
+      },
+    ];
+
+    // Track which index the player is on
+    // If there's saved progress, load it
+    let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
+
+    // 2. Setup the map
+    const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Draw circles for each location (optional, you can hide this for players)
+    LOCATIONS.forEach((loc, i) => {
+      L.circle([loc.lat, loc.lng], {
+        color: i === currentIndex ? "#2563eb" : "#999",
+        fillColor: i === currentIndex ? "#2563eb33" : "#9993",
+        fillOpacity: 0.4,
+        radius: loc.radius
+      }).addTo(map).bindPopup(loc.name);
+    });
+
+    // Player marker
+    let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
+      title: "You",
+    }).addTo(map);
+
+    // Show the first hint immediately (on page load) only if we are at start
+    showHint(LOCATIONS[currentIndex]);
+
+    // 3. Geolocation
+    if ("geolocation" in navigator) {
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy;
+
+          playerMarker.setLatLng([lat, lng]);
+          document.getElementById("status").textContent =
+            `You are here (accuracy ~${Math.round(accuracy)}m)`;
+
+          // keep map centered a bit at the beginning
+          if (!map._userMoved) {
+            map.setView([lat, lng]);
+          }
+
+          checkProximity(lat, lng);
+        },
+        (err) => {
+          console.error(err);
+          document.getElementById("status").textContent =
+            "Couldn't get your location. Make sure GPS is enabled and you're on HTTPS.";
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 8000,
+        }
+      );
+
+      // detect user moving map, then we stop auto-centering
+      map.on("dragstart", () => { map._userMoved = true; });
+
+    } else {
+      alert("Geolocation is not supported in this browser.");
+    }
+
+    // 4. Distance check
+    function checkProximity(userLat, userLng) {
+      const target = LOCATIONS[currentIndex];
+      if (!target) return; // done
+
+      const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
+      // console.log("Distance to next:", dist);
+
+      if (dist <= target.radius) {
+        // reached!
+        showHint(target);
+        currentIndex++;
+        localStorage.setItem("huntProgress", currentIndex.toString());
+      }
+    }
+
+    // Haversine (rough) distance in meters
+    function distanceInMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // metres
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lon2-lon1) * Math.PI/180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      const d = R * c;
+      return d;
+    }
+
+    // 5. Hint UI
+    function showHint(locationObj) {
+      if (!locationObj) return;
+      const box = document.getElementById("hintBox");
+      document.getElementById("hintTitle").textContent = `Next stop: ${locationObj.name}`;
+      document.getElementById("hintText").textContent = locationObj.hint;
+      box.style.display = "block";
+
+      // also update status
+      document.getElementById("status").textContent =
+        `Unlocked: ${locationObj.name}`;
+    }
+
+    function closeHint() {
+      const box = document.getElementById("hintBox");
+      box.style.display = "none";
+
+      // if we advanced beyond last location
+      if (currentIndex >= LOCATIONS.length) {
+        document.getElementById("status").textContent =
+          "Hunt complete 🎉";
+      } else {
+        document.getElementById("status").textContent =
+          `Go to: ${LOCATIONS[currentIndex].name}`;
+      }
+    }
+  </script>
+</body>
+</html>
