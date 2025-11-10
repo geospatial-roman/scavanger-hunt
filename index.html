@@ -101,7 +101,7 @@
   <div class="progress-wrap">
     <div class="progress-bar" id="progressBar"></div>
   </div>
-  <button class="show-zone-btn" onclick="showCurrentZone()">Show next zone</button>
+  <button class="show-zone-btn" id="toggleZoneBtn" onclick="toggleNextZone()">Show next zone</button>
 
   <!-- Hint modal -->
   <div class="hint-popup" id="hintBox">
@@ -146,43 +146,45 @@
       },
     ];
 
+    // read saved progress (this is the "next" stop index)
     let saved = localStorage.getItem("huntProgress");
     let currentIndex = isNaN(parseInt(saved, 10)) ? 0 : parseInt(saved, 10);
 
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 17);
 
-    // --- Define multiple base maps ---
+    // basemaps
     const baseLayers = {
       "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; OpenStreetMap contributors'
       }),
-
       "Satellite (ESRI)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        attribution: '&copy; <a href=\"https://www.esri.com/\">Esri</a>, Earthstar Geographics'
+        attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Earthstar Geographics'
       }),
-
       "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-        attribution: 'Map data: &copy; <a href=\"https://opentopomap.org\">OpenTopoMap</a>'
+        attribution: 'Map data: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
       }),
-
       "Dark Mode": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
         attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
       })
     };
-
-    // --- Add your default base layer ---
     baseLayers["OpenStreetMap"].addTo(map);
-
-    // --- Add a control to switch between them ---
     L.control.layers(baseLayers).addTo(map);
 
     // player marker
     let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], { title: "You" }).addTo(map);
 
+    // permanent zones
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
+
+    // temporary preview of "next zone"
+    let tempZoneCircle = null;
+
+    // show start immediately
     createStartZone();
+    // progress bar to saved value
     updateProgress();
 
+    // we only do the "rebuild previous zones" once per load
     let triedRecovery = false;
 
     if ("geolocation" in navigator) {
@@ -198,6 +200,7 @@
 
           if (!map._userMoved) map.setView([lat, lng]);
 
+          // always try to rebuild on first fix
           if (!triedRecovery) {
             triedRecovery = true;
             tryRecoverProgressFromPosition(lat, lng);
@@ -218,23 +221,35 @@
       alert("Geolocation is not supported in this browser.");
     }
 
+    // try to ensure all previous zones are visible, AND detect if user is in a later zone
     function tryRecoverProgressFromPosition(lat, lng) {
-      if (currentIndex > 0) return;
+      // 1) make zones from saved progress visible
+      const lastSavedVisited = Math.max(0, currentIndex - 1);
+      for (let i = 0; i <= lastSavedVisited; i++) {
+        ensureZoneCircle(i, true);
+      }
 
-      let lastReachedIndex = -1;
+      // 2) see if the player is actually standing in a later zone than saved
+      let lastReachedByPosition = -1;
       for (let i = 0; i < LOCATIONS.length; i++) {
         const loc = LOCATIONS[i];
         const dist = distanceInMeters(lat, lng, loc.lat, loc.lng);
-        if (dist <= loc.radius) lastReachedIndex = i;
+        if (dist <= loc.radius) {
+          lastReachedByPosition = i;
+        }
       }
 
-      if (lastReachedIndex >= 0) {
-        for (let j = 0; j <= lastReachedIndex; j++) ensureZoneCircle(j, true);
-        currentIndex = lastReachedIndex + 1;
+      // if the player is in a later zone than what was saved, upgrade progress
+      if (lastReachedByPosition >= currentIndex) {
+        for (let j = 0; j <= lastReachedByPosition; j++) {
+          ensureZoneCircle(j, true);
+        }
+        currentIndex = lastReachedByPosition + 1;
         localStorage.setItem("huntProgress", currentIndex.toString());
-        showHint(LOCATIONS[lastReachedIndex]);
-        updateProgress();
+        showHint(LOCATIONS[lastReachedByPosition]);
       }
+
+      updateProgress();
     }
 
     function createStartZone() {
@@ -258,6 +273,14 @@
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
       if (dist <= target.radius) {
         ensureZoneCircle(currentIndex, true);
+
+        // remove temp preview if it was for this zone
+        if (tempZoneCircle) {
+          map.removeLayer(tempZoneCircle);
+          tempZoneCircle = null;
+          resetToggleButton();
+        }
+
         showHint(target);
         currentIndex++;
         localStorage.setItem("huntProgress", currentIndex.toString());
@@ -277,7 +300,6 @@
             fillOpacity: 0.25,
           });
         }
-        zoneCircles[index].openPopup();
         return;
       }
 
@@ -291,17 +313,50 @@
       .bindPopup(`<b>${loc.name}</b>`);
       circle.on("click", () => showHint(loc));
       zoneCircles[index] = circle;
-      map.setView([loc.lat, loc.lng], 17);
-      circle.openPopup();
     }
 
-    function showCurrentZone() {
-      const target = LOCATIONS[currentIndex];
-      if (!target) {
+    // button: show/hide next zone
+    function toggleNextZone() {
+      const btn = document.getElementById("toggleZoneBtn");
+
+      if (currentIndex >= LOCATIONS.length) {
         document.getElementById("status").textContent = "Hunt complete 🎉";
         return;
       }
-      ensureZoneCircle(currentIndex, false);
+
+      // hide if already shown
+      if (tempZoneCircle) {
+        map.removeLayer(tempZoneCircle);
+        tempZoneCircle = null;
+        resetToggleButton();
+        return;
+      }
+
+      // if it's already a permanent (visited) circle, just open it
+      if (zoneCircles[currentIndex]) {
+        zoneCircles[currentIndex].openPopup();
+        return;
+      }
+
+      const target = LOCATIONS[currentIndex];
+      tempZoneCircle = L.circle([target.lat, target.lng], {
+        color: "#2563eb",
+        fillColor: "#2563eb33",
+        fillOpacity: 0.3,
+        radius: target.radius
+      })
+      .addTo(map)
+      .bindPopup(`<b>${target.name}</b>`);
+      tempZoneCircle.on("click", () => showHint(target));
+      map.setView([target.lat, target.lng], 17);
+      tempZoneCircle.openPopup();
+
+      btn.textContent = "Hide next zone";
+    }
+
+    function resetToggleButton() {
+      const btn = document.getElementById("toggleZoneBtn");
+      btn.textContent = "Show next zone";
     }
 
     function distanceInMeters(lat1, lon1, lat2, lon2) {
@@ -310,7 +365,10 @@
       const φ2 = lat2 * Math.PI/180;
       const Δφ = (lat2-lat1) * Math.PI/180;
       const Δλ = (lon2-lon1) * Math.PI/180;
-      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+
+      const a = Math.sin(Δφ/2)**2 +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2)**2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return R * c;
     }
@@ -341,7 +399,8 @@
       bar.style.width = (completed / total) * 100 + "%";
     }
 
-    window.showCurrentZone = showCurrentZone;
+    // expose
+    window.toggleNextZone = toggleNextZone;
     window.closeHint = closeHint;
   </script>
 </body>
