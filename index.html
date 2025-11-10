@@ -8,7 +8,6 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
 
@@ -113,85 +112,78 @@
 
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
   <script>
-const LOCATIONS = [
-  {
-    name: "Start",
-    lat: 48.162493646740266,  // change to your real coords
-    lng: 11.553500966165672,
-    radius: 40,
-    hint: "Welcome! 🥳 Your first task: go to the big fountain on the square.",
-  },
-  {
-    name: "Fountain",
-    lat: 48.162878837180855,
-    lng: 11.556791416517495,
-    radius: 35,
-    hint: "Nice! Now find the red door nearby and stand in front of it.",
-  },
-  {
-    name: "Red Door",
-    lat: 48.161733624261046,
-    lng: 11.556842230896956,
-    radius: 35,
-    hint: "Almost there! Last stop: go to the café corner.",
-  },
-  {
-    name: "Finish",
-    lat: 48.161800809763136,
-    lng: 11.554399688680215,
-    radius: 30,
-    hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
-  },
-];
+    const LOCATIONS = [
+      {
+        name: "Start",
+        lat: 48.162493646740266,
+        lng: 11.553500966165672,
+        radius: 40,
+        hint: "Welcome! 🥳 Your first task: go to the big fountain on the square.",
+      },
+      {
+        name: "Fountain",
+        lat: 48.162878837180855,
+        lng: 11.556791416517495,
+        radius: 35,
+        hint: "Nice! Now find the red door nearby and stand in front of it.",
+      },
+      {
+        name: "Red Door",
+        lat: 48.161733624261046,
+        lng: 11.556842230896956,
+        radius: 35,
+        hint: "Almost there! Last stop: go to the café corner.",
+      },
+      {
+        name: "Finish",
+        lat: 48.161800809763136,
+        lng: 11.554399688680215,
+        radius: 30,
+        hint: "You made it! 🎉 Give this code to the organizer: HUNT-2025",
+      },
+    ];
 
+    let saved = localStorage.getItem("huntProgress");
+    let currentIndex = isNaN(parseInt(saved, 10)) ? 0 : parseInt(saved, 10);
 
-    // progress: which location is NEXT
-    let currentIndex = parseInt(localStorage.getItem("huntProgress") || "0", 10);
+    const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 17);
 
-    const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 16);
+    // --- Define multiple base maps ---
+    const baseLayers = {
+      "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+      }),
 
-// --- Define multiple base maps ---
-const baseLayers = {
-  "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; OpenStreetMap contributors'
-  }),
+      "Satellite (ESRI)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: '&copy; <a href=\"https://www.esri.com/\">Esri</a>, Earthstar Geographics'
+      }),
 
-  "Satellite (ESRI)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    attribution: '&copy; <a href=\"https://www.esri.com/\">Esri</a>, Earthstar Geographics'
-  }),
+      "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        attribution: 'Map data: &copy; <a href=\"https://opentopomap.org\">OpenTopoMap</a>'
+      }),
 
-  "Topographic": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-    attribution: 'Map data: &copy; <a href=\"https://opentopomap.org\">OpenTopoMap</a>'
-  }),
+      "Dark Mode": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+      })
+    };
 
-  "Dark Mode": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
-  })
-};
+    // --- Add your default base layer ---
+    baseLayers["OpenStreetMap"].addTo(map);
 
-// --- Add your default base layer ---
-baseLayers["OpenStreetMap"].addTo(map);
+    // --- Add a control to switch between them ---
+    L.control.layers(baseLayers).addTo(map);
 
-// --- Add a control to switch between them ---
-L.control.layers(baseLayers).addTo(map);
+    // player marker
+    let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], { title: "You" }).addTo(map);
 
-
-    let playerMarker = L.marker([LOCATIONS[0].lat, LOCATIONS[0].lng], {
-      title: "You",
-    }).addTo(map);
-
-    // to keep all visible circles
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
-
-    // 🔹 show the first zone right away, styled green & very transparent
     createStartZone();
-
-    // update progress bar according to saved progress
     updateProgress();
+
+    let triedRecovery = false;
 
     if ("geolocation" in navigator) {
       navigator.geolocation.watchPosition(
@@ -204,8 +196,11 @@ L.control.layers(baseLayers).addTo(map);
           document.getElementById("status").textContent =
             `You are here (accuracy ~${Math.round(accuracy)}m)`;
 
-          if (!map._userMoved) {
-            map.setView([lat, lng]);
+          if (!map._userMoved) map.setView([lat, lng]);
+
+          if (!triedRecovery) {
+            triedRecovery = true;
+            tryRecoverProgressFromPosition(lat, lng);
           }
 
           checkProximity(lat, lng);
@@ -215,11 +210,7 @@ L.control.layers(baseLayers).addTo(map);
           document.getElementById("status").textContent =
             "Couldn't get your location. Make sure GPS is enabled and you're on HTTPS.";
         },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 8000,
-        }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 }
       );
 
       map.on("dragstart", () => { map._userMoved = true; });
@@ -227,22 +218,36 @@ L.control.layers(baseLayers).addTo(map);
       alert("Geolocation is not supported in this browser.");
     }
 
+    function tryRecoverProgressFromPosition(lat, lng) {
+      if (currentIndex > 0) return;
+
+      let lastReachedIndex = -1;
+      for (let i = 0; i < LOCATIONS.length; i++) {
+        const loc = LOCATIONS[i];
+        const dist = distanceInMeters(lat, lng, loc.lat, loc.lng);
+        if (dist <= loc.radius) lastReachedIndex = i;
+      }
+
+      if (lastReachedIndex >= 0) {
+        for (let j = 0; j <= lastReachedIndex; j++) ensureZoneCircle(j, true);
+        currentIndex = lastReachedIndex + 1;
+        localStorage.setItem("huntProgress", currentIndex.toString());
+        showHint(LOCATIONS[lastReachedIndex]);
+        updateProgress();
+      }
+    }
+
     function createStartZone() {
       const start = LOCATIONS[0];
       const circle = L.circle([start.lat, start.lng], {
-        color: "#16a34a",          // green border
-        fillColor: "#16a34a22",    // very transparent green
+        color: "#16a34a",
+        fillColor: "#16a34a22",
         fillOpacity: 0.2,
         radius: start.radius
       })
       .addTo(map)
-      .bindPopup(`<b>Start</b>`);  // label as "Start"
-
-      // clicking the start zone should show the first hint
-      circle.on("click", () => {
-        showHint(start);
-      });
-
+      .bindPopup("<b>Start</b>");
+      circle.on("click", () => showHint(start));
       zoneCircles[0] = circle;
     }
 
@@ -251,29 +256,31 @@ L.control.layers(baseLayers).addTo(map);
       if (!target) return;
 
       const dist = distanceInMeters(userLat, userLng, target.lat, target.lng);
-
       if (dist <= target.radius) {
-        // make sure zone is visible
         ensureZoneCircle(currentIndex, true);
         showHint(target);
-
         currentIndex++;
         localStorage.setItem("huntProgress", currentIndex.toString());
         updateProgress();
       }
     }
 
-    // create or open a zone circle for given index
     function ensureZoneCircle(index, visited = false) {
       if (index < 0 || index >= LOCATIONS.length) return;
+      const loc = LOCATIONS[index];
 
-      // already exists → just open popup
       if (zoneCircles[index]) {
+        if (visited) {
+          zoneCircles[index].setStyle({
+            color: "#16a34a",
+            fillColor: "#16a34a22",
+            fillOpacity: 0.25,
+          });
+        }
         zoneCircles[index].openPopup();
         return;
       }
 
-      const loc = LOCATIONS[index];
       const circle = L.circle([loc.lat, loc.lng], {
         color: visited ? "#16a34a" : "#2563eb",
         fillColor: visited ? "#16a34a22" : "#2563eb33",
@@ -282,19 +289,12 @@ L.control.layers(baseLayers).addTo(map);
       })
       .addTo(map)
       .bindPopup(`<b>${loc.name}</b>`);
-
-      // click to show the hint modal
-      circle.on("click", () => {
-        showHint(loc);
-      });
-
+      circle.on("click", () => showHint(loc));
       zoneCircles[index] = circle;
-
       map.setView([loc.lat, loc.lng], 17);
       circle.openPopup();
     }
 
-    // button to show next zone
     function showCurrentZone() {
       const target = LOCATIONS[currentIndex];
       if (!target) {
@@ -310,12 +310,8 @@ L.control.layers(baseLayers).addTo(map);
       const φ2 = lat2 * Math.PI/180;
       const Δφ = (lat2-lat1) * Math.PI/180;
       const Δλ = (lon2-lon1) * Math.PI/180;
-
-      const a = Math.sin(Δφ/2) ** 2 +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ/2) ** 2;
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
       return R * c;
     }
 
@@ -324,15 +320,12 @@ L.control.layers(baseLayers).addTo(map);
       document.getElementById("hintTitle").textContent = `Next stop: ${locationObj.name}`;
       document.getElementById("hintText").textContent = locationObj.hint;
       box.style.display = "block";
-
-      document.getElementById("status").textContent =
-        `Unlocked: ${locationObj.name}`;
+      document.getElementById("status").textContent = `Unlocked: ${locationObj.name}`;
     }
 
     function closeHint() {
       const box = document.getElementById("hintBox");
       box.style.display = "none";
-
       if (currentIndex >= LOCATIONS.length) {
         document.getElementById("status").textContent = "Hunt complete 🎉";
       } else {
@@ -341,7 +334,6 @@ L.control.layers(baseLayers).addTo(map);
       }
     }
 
-    // progress bar: completed = currentIndex
     function updateProgress() {
       const bar = document.getElementById("progressBar");
       const total = LOCATIONS.length;
@@ -349,7 +341,6 @@ L.control.layers(baseLayers).addTo(map);
       bar.style.width = (completed / total) * 100 + "%";
     }
 
-    // expose
     window.showCurrentZone = showCurrentZone;
     window.closeHint = closeHint;
   </script>
