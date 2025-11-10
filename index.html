@@ -201,7 +201,63 @@
     let saved = localStorage.getItem("huntProgress");
     let currentIndex = isNaN(parseInt(saved, 10)) ? 0 : parseInt(saved, 10);
 
-    const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 17);
+    const map = L.map("map", {doubleTapZoom: false})).setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 17);
+    (function addDoubleTapSlideZoom(map) {
+      const el = map.getContainer();
+
+      let lastTap = 0;
+      let zooming = false;
+      let startY = 0;
+      let startZoom = map.getZoom();
+
+      el.addEventListener('touchstart', function (e) {
+        const now = Date.now();
+        const TOUCH_DELAY = 300; // ms to consider it a double tap
+
+        if (e.touches.length !== 1) {
+          zooming = false;
+          return;
+        }
+
+        const y = e.touches[0].clientY;
+
+        if (now - lastTap < TOUCH_DELAY) {
+          // second tap → start zoom mode
+          zooming = true;
+          startY = y;
+          startZoom = map.getZoom();
+          e.preventDefault(); // don't let the map pan
+        } else {
+          zooming = false;
+        }
+
+        lastTap = now;
+      }, { passive: false });
+
+      el.addEventListener('touchmove', function (e) {
+        if (!zooming) return;
+        if (e.touches.length !== 1) return;
+
+        const y = e.touches[0].clientY;
+        const diff = startY - y; // drag up = positive
+
+        // adjust sensitivity here
+        const SENSITIVITY = 0.015; // zoom per pixel
+        const newZoom = startZoom + diff * SENSITIVITY;
+
+        map.setZoom(newZoom, { animate: false });
+        e.preventDefault();
+      }, { passive: false });
+
+      el.addEventListener('touchend', function () {
+        if (zooming) {
+          // snap to nearest int zoom
+          map.setZoom(Math.round(map.getZoom()));
+        }
+        zooming = false;
+      });
+    })(map);
+
 
     // basemaps
     const baseLayers = {
