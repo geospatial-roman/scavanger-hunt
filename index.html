@@ -93,14 +93,17 @@
       background: linear-gradient(90deg, #2563eb, #38bdf8);
       transition: width .3s ease;
     }
+
     /* Move and style the base layer control */
     .leaflet-control-layers {
-      margin-bottom: 50px !important;  /* 🟢 space above the progress bar */
+      margin-bottom: 50px !important;  /* space above the progress bar */
       margin-right: 15px !important;   /* spacing from right edge */
       border-radius: 10px !important;
       box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
       background: rgba(255, 255, 255, 0.9) !important;
       font-size: 0.85rem !important;
+      bottom: 70px;
+      right: 10px;
     }
 
     .leaflet-control-layers-list {
@@ -114,6 +117,122 @@
       border-radius: 8px !important;
     }
 
+    /* “i” button styling */
+    .info-btn {
+      position: fixed;
+      bottom: 60px;          /* float above progress bar */
+      right: 25px;
+      z-index: 6000;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 20px;
+      line-height: 34px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 480px) {
+      .hint-popup {
+        max-width: 90%;
+        padding: 0.5rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Fullscreen overlay that blocks the app */
+    .coord-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 12000;            /* above everything else */
+      display: none;             /* shown on load via JS */
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Inner coordinate modal */
+    .coord-modal {
+      background: white;
+      border-radius: 12px;
+      max-width: 90vw;
+      width: 320px;
+      padding: 1.2rem 1.4rem 1.2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      font-size: 0.95rem;
+    }
+
+    .coord-modal h2 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    .coord-modal label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.85rem;
+    }
+
+    .coord-modal input {
+      width: 100%;
+      padding: 0.35rem 0.45rem;
+      margin-top: 0.15rem;
+      margin-bottom: 0.4rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
+    }
+
+    /* Row for D/M/S inputs */
+    .coord-row {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .coord-row input {
+      width: 0;
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.35rem 0.3rem;
+      text-align: center;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .coord-modal button {
+      border: none;
+      border-radius: 9999px;
+      padding: 0.4rem 0.9rem;
+      margin-right: 0.4rem;
+      margin-top: 0.3rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .coord-modal .primary-btn {
+      background: #2563eb;
+      color: white;
+    }
+
+    .coord-modal .secondary-btn {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .coord-modal .danger-btn {
+      background: #f97373;
+      color: white;
+    }
+
+    #coordError {
+      color: #b91c1c;
+      font-size: 0.8rem;
+      min-height: 1.1rem;
+      margin-top: 0.2rem;
+    }
   </style>
 </head>
 <body>
@@ -132,81 +251,225 @@
     <button onclick="closeHint()">Got it!</button>
   </div>
 
+  <!-- Rules modal -->
+  <div class="hint-popup" id="rulesBox" style="display:none;">
+    <h2>Rules 📜</h2>
+    <p id="rulesText">
+      Welcome to the MR CU 1.4 Christmas Schnitzeljagd! 🎉<br><br>
+      🫱🏽‍🫲🏼 Form teams to start the scavanger hunt. <br>
+      📍 Solve each riddle to find the next goal.<br>
+      🚶️ Once you reach a goal zone, the next clue or riddle will pop up on screen.<br>
+      💬 Follow the clues to reach the final destination. <br>
+      📷 Take a group picture at each stop. <br>
+      🎯 Have fun, but don't take too long! <br>
+      🔀 If you get lost, go to any zone, to re-join the hunt or use the "show next zone" button.<br>
+      ℹ️ You can find the clues and zones in the email attachment, too. <br>
+      ⏰  Reach the final stop by 19:00 o'clock.
+    </p>
+    <button onclick="closeRules()">Let's go!</button>
+  </div>
+
+  <!-- Info button (“i”) -->
+  <button class="info-btn" onclick="showRules()">ℹ️</button>
+
+  <!-- Coordinate gate overlay -->
+  <div class="coord-overlay" id="coordOverlay">
+    <div class="coord-modal">
+      <h2>Enter Coordinates 📍</h2>
+      <p style="margin-bottom: 0.7rem;">
+        Please enter the starting coordinates to unlock the hunt.
+      </p>
+
+      <label>Latitude (N)</label>
+      <div class="coord-row">
+        <input id="latDeg" type="text" placeholder="48" aria-label="Latitude degrees">
+        <input id="latMin" type="text" placeholder="09" aria-label="Latitude minutes">
+        <input id="latSec" type="text" placeholder="22" aria-label="Latitude seconds">
+      </div>
+
+      <label>Longitude (E)</label>
+      <div class="coord-row">
+        <input id="lngDeg" type="text" placeholder="11" aria-label="Longitude degrees">
+        <input id="lngMin" type="text" placeholder="35" aria-label="Longitude minutes">
+        <input id="lngSec" type="text" placeholder="19" aria-label="Longitude seconds">
+      </div>
+
+      <div id="coordError"></div>
+
+      <div>
+        <button class="primary-btn" onclick="submitCoords()">Submit</button>
+        <button class="secondary-btn" onclick="tryAgainCoords()">Try again</button>
+        <button class="danger-btn" id="skipBtn" style="display:none;" onclick="skipCoords()">Skip</button>
+      </div>
+    </div>
+  </div>
+
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     crossorigin=""
   ></script>
   <script>
     const LOCATIONS = [
-  {
-    name: "Start HG",
-    lat: 48.15615305668851,
-    lng: 11.588767033927423,
-    radius: 40,
-    hint: "Euer erstes Ziel: Hier trafen sich in der Geschichte schon viele Hausangestellte vor der Arbeit um zu tanzen. Ihr trefft euch hier um euch an warmen Tassen zu wärmen.",
-  },
-  {
-    name: "Stop 1",
-    lat: 48.15260840964887,
-    lng: 11.592070503257368,
-    radius: 60,
-    hint: `Wenn eure Tassen geleert sind, folgt diesem Reim:
-            Hier tobt sonst wild die kalte Flut,
-            ein Tänzeln, Toben – Lebensgut.
-            Doch nun verstummt das Wasserlein,
-            und Münchens Welle schläft allein.`
-  },
-  {
-    name: "Stop 2",
-    lat: 48.143444904588485,
-    lng: 11.58772264788510,
-    radius: 40,
-    hint: "Wenn die letzte Boulekugel geworfen und der letzte Apperol ausgeschenkt ist, wird unter dieser Kuppel aus dem Jahr 1616, jeden sommerlichen Abend das Tanzbein geschwungen.",
-  },
-  {
-    name: "Stop 3",
-    lat: 48.142935842127585,
-    lng: 11.580050283393602,
-    radius: 30,
-    hint: "Auf diesem Platz kann man in stillen Nächten Münchens versteckten Fluss, in weniger stillen, den Pfälzer Wein fließen hören.",
-  },
-    {
-    name: "Stop 4",
-    lat: 48.142062325451676,
-    lng: 11.57751016696055,
-    radius: 50,
-    hint: "Sucht den richtigen, runden Gullideckel in der Mitte des Platzes und lauscht dem Unterirdischen Fluss rauschen.",
-  },
-  {
-    name: "Stop 4",
-    lat: 48.142062325451676,
-    lng: 11.57751016696055,
-    radius: 50,
-    hint: "Nächster Stop: Wärmt euch unter dem wachsamen Blick von Kurfürst Maximilian I. von Bayern bei einem weiteren Tässchen auf.",
-  },
-  {
-    name: "Stop 5",
-    lat: 48.14332920900223,
-    lng: 11.576131742199184,
-    radius: 40,
-    hint: "In diesem Wirthaus kann man direkt in der Küche eine Taxisemmel bestellen und wird nicht von der Bedienung verjagt.",
-  },
-  {
-    name: "Stop 6",
-    lat: 48.13989862652583,
-    lng: 11.577387310704061,
-    radius: 40,
-    hint: "Hier, vor der lieben Frau, sitzen Mönche und genießen goldenes Gebräu der ältesten Brauerei Münchens.",
-  },
-  {
-    name: "Stop 7",
-    lat: 48.13858335211532,
-    lng: 11.572168352693478,
-    radius: 40,
-    hint: "Glückwunsch, ihr seid da!",
-  },
-];
+      {
+        name: "Start Zone",
+        lat: 48.15615305668851,
+        lng: 11.588767033927423,
+        radius: 40,
+        hint: `Deep in the garden, where tall trees sway,\n
+               a wooden giant keeps watch by day.\n
+               No clock, no chime, yet music flows,\n
+               a place where laughter freely grows.\n
+               Find the tower where no bells ring,\n
+               and let the forest guide your spring.`
+      },
+      {
+        name: "Stop 1",
+        lat: 48.15260840964887,
+        lng: 11.592070503257368,
+        radius: 60,
+        hint: `Your tea was warm, a cozy little spark,\n
+        but now seek water running cool and stark.\n
+        A narrow stream where crowds would often cheer,\n
+        yet today it's quiet — strangely still this year.\n
+        Follow the sounds that should be there to dwell,\n
+        and find the place where heat meets icy swell.`
+      },
+      {
+        name: "Stop 2",
+        lat: 48.14341536339145,
+        lng: 11.587711322580303,
+        radius: 40,
+        hint: `Leave the murmuring waters behind and roam,\n
+        to a garden drawn with balance and calm.\n
+        Find 8 paths spreading out like rays,\n
+        each pointing where old footsteps used to stray.\n
+        Where all directions meet as one,\n
+        stand in the center — your journey’s done.`
+      },
+      {
+        name: "Stop 4",
+        lat: 48.14295532414388,
+        lng: 11.580014319271559,
+        radius: 50,
+        hint: `From garden paths where all lines meet,\n
+        walk westward toward a colder street.\n
+        Seek candles glowing in winter’s air,\n
+        where merchants gather with crafts to share.\n
+        In the square, a rider stands so tall,\n
+        an iron prince who overlooks it all.`
+      },
+      {
+        name: "Stop 5",
+        lat: 48.143347257494256,
+        lng: 11.576130340433506,
+        radius: 40,
+        hint: `From winter lights and iron might,\n
+        walk where twin domes rise in sight.\n
+        Their rounded hats watch over town,\n
+        guiding you through streets of brown.\n
+        Beside this giant made of stone,\n
+        seek warmth where monks once poured their own.`
+      },
+      {
+        name: "Stop 7",
+        lat: 48.13858335211532,
+        lng: 11.572168352693478,
+        radius: 20,
+        hint: "Congratulations, you made it! Enjoy the CU1.4 Christmas party!",
+      },
+    ];
 
+    // === Coordinate gate settings (DMS exact match) ===
+    // Adjust these to the exact D/M/S you want as the solution
+    const SECRET_LAT_DEG = 48;
+    const SECRET_LAT_MIN = 09;
+    const SECRET_LAT_SEC = 22;
+
+    const SECRET_LNG_DEG = 11;
+    const SECRET_LNG_MIN = 35;
+    const SECRET_LNG_SEC = 19;
+
+    function parseNumber(value) {
+      const normalized = value.trim().replace(',', '.');
+      if (!normalized) return null;
+      const num = parseFloat(normalized);
+      return isNaN(num) ? null : num;
+    }
+
+    function coordsAreCorrect() {
+      const latDeg = parseNumber(document.getElementById("latDeg").value);
+      const latMin = parseNumber(document.getElementById("latMin").value);
+      const latSec = parseNumber(document.getElementById("latSec").value);
+
+      const lngDeg = parseNumber(document.getElementById("lngDeg").value);
+      const lngMin = parseNumber(document.getElementById("lngMin").value);
+      const lngSec = parseNumber(document.getElementById("lngSec").value);
+
+      if (
+        latDeg === null || latMin === null || latSec === null ||
+        lngDeg === null || lngMin === null || lngSec === null
+      ) {
+        return null; // incomplete/invalid input
+      }
+
+      const latMatches =
+        latDeg === SECRET_LAT_DEG &&
+        latMin === SECRET_LAT_MIN &&
+        latSec === SECRET_LAT_SEC;
+
+      const lngMatches =
+        lngDeg === SECRET_LNG_DEG &&
+        lngMin === SECRET_LNG_MIN &&
+        lngSec === SECRET_LNG_SEC;
+
+      return latMatches && lngMatches;
+    }
+
+    function submitCoords() {
+      const errorEl = document.getElementById("coordError");
+      const skipBtn = document.getElementById("skipBtn");
+
+      const correct = coordsAreCorrect();
+
+      if (correct === null) {
+        errorEl.textContent = "Please enter valid numbers for degrees, minutes and seconds.";
+        return;
+      }
+
+      if (correct) {
+        // correct → close coordinate gate and show rules
+        closeCoordGate();
+        showRules();
+      } else {
+        // wrong → show error + reveal skip button
+        errorEl.textContent = "These coordinates are not correct. Try again or skip.";
+        skipBtn.style.display = "inline-block";
+      }
+    }
+
+    function tryAgainCoords() {
+      document.getElementById("latDeg").value = "";
+      document.getElementById("latMin").value = "";
+      document.getElementById("latSec").value = "";
+      document.getElementById("lngDeg").value = "";
+      document.getElementById("lngMin").value = "";
+      document.getElementById("lngSec").value = "";
+      document.getElementById("coordError").textContent = "";
+      // Skip button stays visible once revealed
+    }
+
+    function skipCoords() {
+      closeCoordGate();
+    }
+
+    function closeCoordGate() {
+      document.getElementById("coordOverlay").style.display = "none";
+    }
+
+    // Show coordinate gate at page load
+    window.addEventListener("load", () => {
+      document.getElementById("coordOverlay").style.display = "flex";
+    });
 
     // read saved progress (this is the "next" stop index)
     let saved = localStorage.getItem("huntProgress");
@@ -214,6 +477,15 @@
 
     const map = L.map("map").setView([LOCATIONS[0].lat, LOCATIONS[0].lng], 17);
 
+    // Show Rules Modal
+    function showRules() {
+      document.getElementById("rulesBox").style.display = "block";
+      document.getElementById("status").textContent = "Regeln anzeigen";
+    }
+
+    function closeRules() {
+      document.getElementById("rulesBox").style.display = "none";
+    }
 
     // basemaps
     const baseLayers = {
@@ -233,13 +505,12 @@
     baseLayers["OpenStreetMap"].addTo(map);
     L.control.layers(baseLayers, null, { position: 'bottomright' }).addTo(map);
 
-
     // Custom Santa icon
     const santaIcon = L.icon({
       iconUrl: 'santa.png',  // path to your image
-      iconSize: [60, 60],    // adjust size to fit nicely on map
-      iconAnchor: [30, 60],  // point of the icon that corresponds to the marker's location
-      popupAnchor: [0, -60], // position of popup relative to icon
+      iconSize: [60, 60],
+      iconAnchor: [30, 60],
+      popupAnchor: [0, -60],
     });
 
     // Player marker using Santa
@@ -247,7 +518,6 @@
       [LOCATIONS[0].lat, LOCATIONS[0].lng],
       { icon: santaIcon, title: "You" }
     ).addTo(map);
-
 
     // permanent zones
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
@@ -257,7 +527,6 @@
 
     // show start immediately
     createStartZone();
-    // progress bar to saved value
     updateProgress();
 
     // we only do the "rebuild previous zones" once per load
@@ -276,7 +545,6 @@
 
           if (!map._userMoved) map.setView([lat, lng]);
 
-          // always try to rebuild on first fix
           if (!triedRecovery) {
             triedRecovery = true;
             tryRecoverProgressFromPosition(lat, lng);
@@ -297,15 +565,12 @@
       alert("Geolocation is not supported in this browser.");
     }
 
-    // try to ensure all previous zones are visible, AND detect if user is in a later zone
     function tryRecoverProgressFromPosition(lat, lng) {
-      // 1) make zones from saved progress visible
       const lastSavedVisited = Math.max(0, currentIndex - 1);
       for (let i = 0; i <= lastSavedVisited; i++) {
         ensureZoneCircle(i, true);
       }
 
-      // 2) see if the player is actually standing in a later zone than saved
       let lastReachedByPosition = -1;
       for (let i = 0; i < LOCATIONS.length; i++) {
         const loc = LOCATIONS[i];
@@ -315,7 +580,6 @@
         }
       }
 
-      // if the player is in a later zone than what was saved, upgrade progress
       if (lastReachedByPosition >= currentIndex) {
         for (let j = 0; j <= lastReachedByPosition; j++) {
           ensureZoneCircle(j, true);
@@ -350,7 +614,6 @@
       if (dist <= target.radius) {
         ensureZoneCircle(currentIndex, true);
 
-        // remove temp preview if it was for this zone
         if (tempZoneCircle) {
           map.removeLayer(tempZoneCircle);
           tempZoneCircle = null;
@@ -368,9 +631,8 @@
       if (index < 0 || index >= LOCATIONS.length) return;
       const loc = LOCATIONS[index];
 
-      // Define your green tones
-      const borderGreen = "#16a34a";   // solid border
-      const fillGreen = "#16a34a80";   // 50% transparency (#RRGGBBAA form)
+      const borderGreen = "#16a34a";
+      const fillGreen = "#16a34a80";
 
       if (zoneCircles[index]) {
         if (visited) {
@@ -397,8 +659,6 @@
       zoneCircles[index] = circle;
     }
 
-
-    // button: show/hide next zone
     function toggleNextZone() {
       const btn = document.getElementById("toggleZoneBtn");
 
@@ -407,7 +667,6 @@
         return;
       }
 
-      // hide if already shown
       if (tempZoneCircle) {
         map.removeLayer(tempZoneCircle);
         tempZoneCircle = null;
@@ -415,7 +674,6 @@
         return;
       }
 
-      // if it's already a permanent (visited) circle, just open it
       if (zoneCircles[currentIndex]) {
         zoneCircles[currentIndex].openPopup();
         return;
@@ -458,8 +716,8 @@
 
     function showHint(locationObj) {
       const box = document.getElementById("hintBox");
-      document.getElementById("hintTitle").textContent = `Next stop: ${locationObj.name}`;
-      document.getElementById("hintText").textContent = locationObj.hint;
+      document.getElementById("hintTitle").textContent = `${locationObj.name}`;
+      document.getElementById("hintText").innerHTML = locationObj.hint.replace(/\n/g, "<br>");
       box.style.display = "block";
       document.getElementById("status").textContent = `Unlocked: ${locationObj.name}`;
     }
