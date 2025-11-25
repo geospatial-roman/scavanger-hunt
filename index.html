@@ -38,7 +38,7 @@
       font-size: 1.25rem;
     }
     .hint-popup p {
-      margin: 0 0 1rem;
+      margin: 0.5rem 0 1rem;
     }
     .hint-popup button {
       border: none;
@@ -49,6 +49,29 @@
       font-weight: 600;
       cursor: pointer;
     }
+
+    /* Tabs for Hint 1 / Hint 2 */
+    .hint-tabs {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .hint-tab {
+      flex: 0 0 auto;
+      padding: 0.25rem 0.7rem;
+      border-radius: 9999px;
+      border: 1px solid #cbd5e1;
+      background: #f9fafb;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .hint-tab.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+
     .status-bar {
       position: fixed;
       top: 10px;
@@ -244,9 +267,13 @@
   </div>
   <button class="show-zone-btn" id="toggleZoneBtn" onclick="toggleNextZone()">Show next zone</button>
 
-  <!-- Hint modal -->
+  <!-- Hint modal with 2 hint pages -->
   <div class="hint-popup" id="hintBox">
     <h2 id="hintTitle">Hint</h2>
+    <div class="hint-tabs">
+      <button id="hintTab1" class="hint-tab active" onclick="setHintPage(1)">Hint 1</button>
+      <button id="hintTab2" class="hint-tab" onclick="setHintPage(2)">Hint 2</button>
+    </div>
     <p id="hintText"></p>
     <button onclick="closeHint()">Got it!</button>
   </div>
@@ -280,19 +307,22 @@
         Please enter the starting coordinates to unlock the hunt.
       </p>
 
-      <label>Latitude (N)</label>
-      <div class="coord-row">
-        <input id="latDeg" type="text" placeholder="48" aria-label="Latitude degrees">
-        <input id="latMin" type="text" placeholder="09" aria-label="Latitude minutes">
-        <input id="latSec" type="text" placeholder="22" aria-label="Latitude seconds">
-      </div>
+        <label>Latitude (N)</label>
+        <div class="coord-row">
+          <input id="latDeg" type="text" placeholder="48" aria-label="Latitude degrees"><p>°</p>
+          <input id="latMin" type="text" placeholder="09" aria-label="Latitude minutes"><p>'</p>
+          <input id="latSec" type="text" placeholder="22" aria-label="Latitude seconds (integer)"><p>.</p>
+          <input id="latSecDec" type="text" placeholder="7" aria-label="Latitude seconds decimal"><p>''</p>
+        </div>
 
-      <label>Longitude (E)</label>
-      <div class="coord-row">
-        <input id="lngDeg" type="text" placeholder="11" aria-label="Longitude degrees">
-        <input id="lngMin" type="text" placeholder="35" aria-label="Longitude minutes">
-        <input id="lngSec" type="text" placeholder="19" aria-label="Longitude seconds">
-      </div>
+        <label>Longitude (E)</label>
+        <div class="coord-row">
+          <input id="lngDeg" type="text" placeholder="11" aria-label="Longitude degrees"><p>°</p>
+          <input id="lngMin" type="text" placeholder="35" aria-label="Longitude minutes"><p>'</p>
+          <input id="lngSec" type="text" placeholder="19" aria-label="Longitude seconds (integer)"><p>.</p>
+          <input id="lngSecDec" type="text" placeholder="5" aria-label="Longitude seconds decimal"><p>''</p>
+        </div>
+
 
       <div id="coordError"></div>
 
@@ -315,79 +345,93 @@
         lat: 48.15615305668851,
         lng: 11.588767033927423,
         radius: 40,
-        hint: `Deep in the garden, where tall trees sway,\n
+        hint2: `Deep in the garden, where tall trees sway,\n
                a wooden giant keeps watch by day.\n
                No clock, no chime, yet music flows,\n
                a place where laughter freely grows.\n
                Find the tower where no bells ring,\n
-               and let the forest guide your spring.`
+               and let the forest guide your spring.`,
+        hint: `Ihr startet dort, wo Arbeit und Spaß sich kreuzen. Doch euer erster Glühwein liegt nicht an diesem Schnittpunkt. Folgt der Verteilung der Menschenmenge nach Osten — entlang einer Dichtefunktion aus Joggern und Hunden. Dort erhebt sich ein Turm, der schon im Sommer von Blasmusik beschallt wird, und im Winter mit Lichterketten glänzt.\n
+        \n
+        Timing Hint: Start making your way to the next stop around 17:00`
       },
       {
         name: "Stop 1",
         lat: 48.15260840964887,
         lng: 11.592070503257368,
         radius: 60,
-        hint: `Your tea was warm, a cozy little spark,\n
+        hint2: `Your tea was warm, a cozy little spark,\n
         but now seek water running cool and stark.\n
         A narrow stream where crowds would often cheer,\n
         yet today it's quiet — strangely still this year.\n
         Follow the sounds that should be there to dwell,\n
-        and find the place where heat meets icy swell.`
+        and find the place where heat meets icy swell.`,
+        hint: `Sucht den Ort, an dem die Ableitung der Surfer eindeutig nicht existiert, weil die Funktion dort permanent springt, runterfällt, hochschnellt und trotzdem irgendwie periodisch aussieht. Ein Ort, der alle Eigenschaften einer nicht-glatten, aber sehr fotogenen Funktion erfüllt.\n
+        \n
+        Timing Hint: Start making your way to the next stop around 17:45
+        `
       },
       {
         name: "Stop 2",
         lat: 48.14341536339145,
         lng: 11.587711322580303,
         radius: 40,
-        hint: `Leave the murmuring waters behind and roam,\n
+        hint2: `Leave the murmuring waters behind and roam,\n
         to a garden drawn with balance and calm.\n
         Find 8 paths spreading out like rays,\n
         each pointing where old footsteps used to stray.\n
         Where all directions meet as one,\n
-        stand in the center — your journey’s done.`
+        stand in the center — your journey’s done.`,
+        hint: `Ihr sucht den Punkt, an dem die Stadt kurz innehält: Ein Pavillon als Fixpunkt in einem Meer aus symmetrischen Wegen. Wenn alle Gradienten der Hektik sich vereinigen, zeigt der einzige kritische Punkt im Gebiet genau dorthin.`
       },
       {
         name: "Stop 4",
         lat: 48.14295532414388,
         lng: 11.580014319271559,
         radius: 50,
-        hint: `From garden paths where all lines meet,\n
+        hint2: `From garden paths where all lines meet,\n
         walk westward toward a colder street.\n
         Seek candles glowing in winter’s air,\n
         where merchants gather with crafts to share.\n
         In the square, a rider stands so tall,\n
-        an iron prince who overlooks it all.`
+        an iron prince who overlooks it all.`,
+        hint: `Wenn ihr den symmetrischen Ruhepunkt verlassen habt, sucht nun einen Ort, an dem die Stadt plötzlich mehr Dimensionen hat: Lichter, Buden, Menschen, Düfte – alles scheint sich zu überlagern wie eine schlecht separierbare Datenwolke. Der Name dieses Platzes erinnert eher an eine bayrische Dynastie, die nicht nur Bayern, sondern auch viele Geschichtsklausuren geprägt hat.`
       },
       {
         name: "Stop 5",
         lat: 48.143347257494256,
         lng: 11.576130340433506,
         radius: 40,
-        hint: `From winter lights and iron might,\n
+        hint2: `From winter lights and iron might,\n
         walk where twin domes rise in sight.\n
         Their rounded hats watch over town,\n
         guiding you through streets of brown.\n
         Beside this giant made of stone,\n
-        seek warmth where monks once poured their own.`
+        seek warmth where monks once poured their own.`,
+        hint: `Nachdem ihr inzwischen genug Glühwein-Approximationen durchgeführt habt, sucht ihr nun einen Ort, an dem die Wahrscheinlichkeit für warme Speisen mit steigender Gruppengröße gegen 1 konvergiert. Es klingt wie eine Gaststätte in einem Kloster — und mathematisch gesehen ist es der Grenzwert aller Münchner Feierabendfolgen. \n
+        \n
+        Timing Hint: Start making your way to the next stop around 18:45`
       },
       {
         name: "Stop 7",
         lat: 48.13858335211532,
         lng: 11.572168352693478,
         radius: 20,
-        hint: "Congratulations, you made it! Enjoy the CU1.4 Christmas party!",
+        hint2: "Congratulations, you made it! Enjoy the CU1.4 Christmas party!",
+        hint1: "You’re at the final stop – time to celebrate at Augustiner Klosterwirt! 🎉"
       },
     ];
 
     // === Coordinate gate settings (DMS exact match) ===
-    // Adjust these to the exact D/M/S you want as the solution
     const SECRET_LAT_DEG = 48;
-    const SECRET_LAT_MIN = 09;
+    const SECRET_LAT_MIN = 9;
     const SECRET_LAT_SEC = 22;
+    const SECRET_LAT_SEC_DEC = 104;   // e.g. for 22.7 seconds
 
     const SECRET_LNG_DEG = 11;
     const SECRET_LNG_MIN = 35;
     const SECRET_LNG_SEC = 19;
+    const SECRET_LNG_SEC_DEC = 554;   // e.g. for 19.5 seconds
 
     function parseNumber(value) {
       const normalized = value.trim().replace(',', '.');
@@ -400,14 +444,16 @@
       const latDeg = parseNumber(document.getElementById("latDeg").value);
       const latMin = parseNumber(document.getElementById("latMin").value);
       const latSec = parseNumber(document.getElementById("latSec").value);
+      const latSecDec = parseNumber(document.getElementById("latSecDec").value);
 
       const lngDeg = parseNumber(document.getElementById("lngDeg").value);
       const lngMin = parseNumber(document.getElementById("lngMin").value);
       const lngSec = parseNumber(document.getElementById("lngSec").value);
+      const lngSecDec = parseNumber(document.getElementById("lngSecDec").value);
 
       if (
-        latDeg === null || latMin === null || latSec === null ||
-        lngDeg === null || lngMin === null || lngSec === null
+        latDeg === null || latMin === null || latSec === null || latSecDec === null ||
+        lngDeg === null || lngMin === null || lngSec === null || lngSecDec === null
       ) {
         return null; // incomplete/invalid input
       }
@@ -415,48 +461,58 @@
       const latMatches =
         latDeg === SECRET_LAT_DEG &&
         latMin === SECRET_LAT_MIN &&
-        latSec === SECRET_LAT_SEC;
+        latSec === SECRET_LAT_SEC &&
+        latSecDec === SECRET_LAT_SEC_DEC;
 
       const lngMatches =
         lngDeg === SECRET_LNG_DEG &&
         lngMin === SECRET_LNG_MIN &&
-        lngSec === SECRET_LNG_SEC;
+        lngSec === SECRET_LNG_SEC &&
+        lngSecDec === SECRET_LNG_SEC_DEC;
 
       return latMatches && lngMatches;
     }
+
 
     function submitCoords() {
       const errorEl = document.getElementById("coordError");
       const skipBtn = document.getElementById("skipBtn");
 
+      // 🔥 Show Skip as soon as Submit was pressed (first time or any time)
+      skipBtn.style.display = "inline-block";
+
       const correct = coordsAreCorrect();
 
       if (correct === null) {
+        // some fields empty / not valid numbers
         errorEl.textContent = "Please enter valid numbers for degrees, minutes and seconds.";
         return;
       }
 
       if (correct) {
-        // correct → close coordinate gate and show rules
+        // ✅ correct → close coordinate gate and show rules
         closeCoordGate();
         showRules();
       } else {
-        // wrong → show error + reveal skip button
+        // ❌ wrong numbers
         errorEl.textContent = "These coordinates are not correct. Try again or skip.";
-        skipBtn.style.display = "inline-block";
       }
     }
+
 
     function tryAgainCoords() {
       document.getElementById("latDeg").value = "";
       document.getElementById("latMin").value = "";
       document.getElementById("latSec").value = "";
+      document.getElementById("latSecDec").value = "";
       document.getElementById("lngDeg").value = "";
       document.getElementById("lngMin").value = "";
       document.getElementById("lngSec").value = "";
+      document.getElementById("lngSecDec").value = "";
       document.getElementById("coordError").textContent = "";
-      // Skip button stays visible once revealed
+      // Skip button stays visible once revealed (unchanged behavior)
     }
+
 
     function skipCoords() {
       closeCoordGate();
@@ -524,6 +580,10 @@
 
     // temporary preview of "next zone"
     let tempZoneCircle = null;
+
+    // track current hint
+    let currentHintLocation = null;
+    let currentHintPage = 1;
 
     // show start immediately
     createStartZone();
@@ -601,7 +661,6 @@
         radius: start.radius
       })
       .addTo(map)
-      .bindPopup("<b>Start</b>");
       circle.on("click", () => showHint(start));
       zoneCircles[0] = circle;
     }
@@ -714,12 +773,42 @@
       return R * c;
     }
 
+    // --- Hint popup logic with 2 pages ---
     function showHint(locationObj) {
+      currentHintLocation = locationObj;
+      currentHintPage = 1;
+
       const box = document.getElementById("hintBox");
-      document.getElementById("hintTitle").textContent = `${locationObj.name}`;
-      document.getElementById("hintText").innerHTML = locationObj.hint.replace(/\n/g, "<br>");
+      document.getElementById("hintTitle").textContent = locationObj.name;
+
+      // start on Hint 1
+      setHintPage(1);
+
       box.style.display = "block";
       document.getElementById("status").textContent = `Unlocked: ${locationObj.name}`;
+    }
+
+    function setHintPage(page) {
+      if (!currentHintLocation) return;
+
+      currentHintPage = page;
+      const tab1 = document.getElementById("hintTab1");
+      const tab2 = document.getElementById("hintTab2");
+      tab1.classList.toggle("active", page === 1);
+      tab2.classList.toggle("active", page === 2);
+
+      const textEl = document.getElementById("hintText");
+      let text = "";
+
+      if (page === 1) {
+        // use hint as main text, or hint1 if you later add that
+        text = currentHintLocation.hint || "";
+      } else {
+        // use hint2 if present, otherwise placeholder
+        text = currentHintLocation.hint2 || "No second hint yet.";
+      }
+
+      textEl.innerHTML = text.replace(/\n/g, "<br>");
     }
 
     function closeHint() {
@@ -743,6 +832,7 @@
     // expose
     window.toggleNextZone = toggleNextZone;
     window.closeHint = closeHint;
+    window.setHintPage = setHintPage;
   </script>
 </body>
 </html>
