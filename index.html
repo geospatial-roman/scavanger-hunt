@@ -345,21 +345,21 @@
         lat: 48.15615305668851,
         lng: 11.588767033927423,
         radius: 40,
-        hint2: `Deep in the garden, where tall trees sway,\n
-               a wooden giant keeps watch by day.\n
-               No clock, no chime, yet music flows,\n
-               a place where laughter freely grows.\n
-               Find the tower where no bells ring,\n
-               and let the forest guide your spring.`,
+        hint2: `Within the garden, wide and green,\n
+                a little hut is softly seen.\n
+                No cow in sight, yet milk is near -\n
+                a cozy stop for food and cheer.\n
+                By students’ halls where ideas shine,\n
+                you’ll spot cable cars and wine.\n`,
         hint: `Ihr startet dort, wo Arbeit und Spaß sich kreuzen. Doch euer erster Glühwein liegt nicht an diesem Schnittpunkt. Folgt der Verteilung der Menschenmenge nach Osten — entlang einer Dichtefunktion aus Joggern und Hunden. Dort erhebt sich ein Turm, der schon im Sommer von Blasmusik beschallt wird, und im Winter mit Lichterketten glänzt.\n
         \n
         Timing Hint: Start making your way to the next stop around 17:00`
       },
       {
         name: "Stop 1",
-        lat: 48.15260840964887,
-        lng: 11.592070503257368,
-        radius: 60,
+        lat: 48.14981706899348,
+        lng: 11.585536560654537,
+        radius: 30,
         hint2: `Your tea was warm, a cozy little spark,\n
         but now seek water running cool and stark.\n
         A narrow stream where crowds would often cheer,\n
@@ -417,8 +417,12 @@
         lat: 48.13858335211532,
         lng: 11.572168352693478,
         radius: 20,
-        hint2: "Congratulations, you made it! Enjoy the CU1.4 Christmas party!",
-        hint1: "You’re at the final stop – time to celebrate at Augustiner Klosterwirt! 🎉"
+        hint2: "Congratulations, you made it! Enjoy the CU1.4 Christmas party at Augustiner Klosterwirt!!",
+        hint: `<div style="text-align:center;">
+      <img src="augustiner_klosterwirt.jpg" style="width:200px">
+      <strong>Congratulations, you made it! 🎉</strong><br>
+      Enjoy the CU1.4 Christmas party – you’ve earned it! 🍷✨
+    </div>`,
       },
     ];
 
@@ -569,12 +573,15 @@
       popupAnchor: [0, -60],
     });
 
+
+
+
     // Player marker using Santa
     let playerMarker = L.marker(
       [LOCATIONS[0].lat, LOCATIONS[0].lng],
       { icon: santaIcon, title: "You" }
     ).addTo(map);
-
+    playerMarker.bindPopup("<b>Ho, Ho, Ho! </b>");
     // permanent zones
     const zoneCircles = new Array(LOCATIONS.length).fill(null);
 
