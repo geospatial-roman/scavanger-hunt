@@ -125,7 +125,7 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
       background: rgba(255, 255, 255, 0.9) !important;
       font-size: 0.85rem !important;
-      bottom: 70px;
+      bottom: 60px;
       right: 10px;
     }
 
@@ -144,7 +144,7 @@
     .info-btn {
       position: fixed;
       bottom: 60px;          /* float above progress bar */
-      right: 25px;
+      left: 10px;
       z-index: 6000;
       background: white;
       border: 1px solid #ddd;
@@ -158,6 +158,12 @@
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 
+    .coord-scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
     @media (max-width: 480px) {
       .hint-popup {
         max-width: 90%;
@@ -165,6 +171,12 @@
         font-size: 0.8rem;
       }
     }
+
+    .hint-popup-content {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: .5rem;
+}
 
     /* Fullscreen overlay that blocks the app */
     .coord-overlay {
@@ -175,6 +187,12 @@
       display: none;             /* shown on load via JS */
       align-items: center;
       justify-content: center;
+      /* NEW: scrollable */
+      max-height: 300%;
+      overflow-y: auto;
+
+      padding: 1.2rem 1.4rem 1rem;
+
     }
 
     /* Inner coordinate modal */
@@ -207,6 +225,7 @@
       border-radius: 6px;
       border: 1px solid #ccc;
       font-size: 0.9rem;
+
     }
 
     /* Row for D/M/S inputs */
@@ -282,16 +301,13 @@
   <div class="hint-popup" id="rulesBox" style="display:none;">
     <h2>Rules 📜</h2>
     <p id="rulesText">
-      Welcome to the MR CU 1.4 Christmas Schnitzeljagd! 🎉<br><br>
+      Welcome to the 2025 Christmas Schnitzeljagd! 🎉<br><br>
       🫱🏽‍🫲🏼 Form teams to start the scavanger hunt. <br>
       📍 Solve each riddle to find the next goal.<br>
       🚶️ Once you reach a goal zone, the next clue or riddle will pop up on screen.<br>
       💬 Follow the clues to reach the final destination. <br>
       📷 Take a group picture at each stop. <br>
-      🎯 Have fun, but don't take too long! <br>
       🔀 If you get lost, go to any zone, to re-join the hunt or use the "show next zone" button.<br>
-      ℹ️ You can find the clues and zones in the email attachment, too. <br>
-      ⏰  Reach the final stop by 19:00 o'clock.
     </p>
     <button onclick="closeRules()">Let's go!</button>
   </div>
@@ -301,7 +317,37 @@
 
   <!-- Coordinate gate overlay -->
   <div class="coord-overlay" id="coordOverlay">
-    <div class="coord-modal">
+
+      <div class="coord-modal">
+         <div class="coord-scroll">
+
+
+        <p> 1. Imagine you are a computer: please convert [110000] to decimal.</p>
+        <p> 2. Here is the build up for a cube. Once put together, we shall place it in front of
+            you with face 1 facing you and face 3 facing down. Should you roll it twice away
+            from you, then twice to the right and then back towards you once, which face is on
+            the table?</p>
+        <img src="riddle_dice.png" style="width:200px">
+        <p> 3. What is the sum of the 2nd and the 8 th Fibonacci numbers?</p>
+        <p> 4. Your American Colleague looks pale, he shivers. You press a thermometer to his
+            forehead and establish he definitely has a fever, 40°C! Yet he doesn’t seem so
+            troubled by this number. Which number should you give him, so he might
+            understand how dire the situation is?</p>
+        <p> 5. Bored in a meeting, you watch as the minutes slowly tick away on the clock
+                hanging from the wall. It is only now 12:02, you still have to wait 28 minutes until
+                your lunch break. But tell me, can you calculate what the smaller
+                angle is (in degrees) between the hours and the minutes hand?</p>
+        <p> 6. You have stared at this presentation all day. You blink at the small numbers in
+                the bottom corner of your screen: 21:00. No one should be working at this time, yet
+                you have so little time left! You agreed last Thursday that these results would be
+                presented at the next weekly meeting, at 8am sharp! You take a second to reflect,
+                how many hours are actually left until then? Oh no, you’ve missed your Tuesday
+                Salsa Class!</p>
+        <p> 7. A simpler clue, to ease your mind. Could you please solve the following system?</p>
+        <p> 8. DLIV</p>
+
+
+
       <h2>Enter Coordinates 📍</h2>
       <p style="margin-bottom: 0.7rem;">
         Please enter the starting coordinates to unlock the hunt.
@@ -309,18 +355,18 @@
 
         <label>Latitude (N)</label>
         <div class="coord-row">
-          <input id="latDeg" type="text" placeholder="1" aria-label="Latitude degrees"><p>°</p>
+          <input id="latDeg" type="text" placeholder="11" aria-label="Latitude degrees"><p>°</p>
           <input id="latMin" type="text" placeholder="2" aria-label="Latitude minutes"><p>'</p>
-          <input id="latSec" type="text" placeholder="3" aria-label="Latitude seconds (integer)"><p>.</p>
-          <input id="latSecDec" type="text" placeholder="4" aria-label="Latitude seconds decimal"><p>''</p>
+          <input id="latSec" type="text" placeholder="33" aria-label="Latitude seconds (integer)"><p>.</p>
+          <input id="latSecDec" type="text" placeholder="444" aria-label="Latitude seconds decimal"><p>''</p>
         </div>
 
         <label>Longitude (E)</label>
         <div class="coord-row">
-          <input id="lngDeg" type="text" placeholder="5" aria-label="Longitude degrees"><p>°</p>
-          <input id="lngMin" type="text" placeholder="6" aria-label="Longitude minutes"><p>'</p>
-          <input id="lngSec" type="text" placeholder="7" aria-label="Longitude seconds (integer)"><p>.</p>
-          <input id="lngSecDec" type="text" placeholder="8" aria-label="Longitude seconds decimal"><p>''</p>
+          <input id="lngDeg" type="text" placeholder="55" aria-label="Longitude degrees"><p>°</p>
+          <input id="lngMin" type="text" placeholder="66" aria-label="Longitude minutes"><p>'</p>
+          <input id="lngSec" type="text" placeholder="77" aria-label="Longitude seconds (integer)"><p>.</p>
+          <input id="lngSecDec" type="text" placeholder="888" aria-label="Longitude seconds decimal"><p>''</p>
         </div>
 
 
@@ -332,7 +378,7 @@
         <button class="danger-btn" id="skipBtn" style="display:none;" onclick="skipCoords()">Skip</button>
       </div>
 
-
+      </div>
     </div>
   </div>
 
@@ -347,44 +393,48 @@
         lat: 48.15615305668851,
         lng: 11.588767033927423,
         radius: 40,
-        hint2: `Within the garden, wide and green,\n
+        hint: `Within the garden, wide and green,\n
                 a little hut is softly seen.\n
                 No cow in sight, yet milk is near -\n
                 a cozy stop for food and cheer.\n
                 By students’ halls where ideas shine,\n
                 you’ll spot cable cars and wine.\n`,
-        hint: `Ihr startet dort, wo Arbeit und Spaß sich kreuzen. Doch euer erster Glühwein liegt nicht an diesem Schnittpunkt. Folgt der Verteilung der Menschenmenge nach Osten — entlang einer Dichtefunktion aus Joggern und Hunden. Dort erhebt sich ein Turm, der schon im Sommer von Blasmusik beschallt wird, und im Winter mit Lichterketten glänzt.\n
-        \n
-        Timing Hint: Start making your way to the next stop around 17:00`
+        hint2: `
+        Next to the café of the 43th of queens. \n
+        A little shop stands in the greens.\n
+        Sells cool drinks in summer time,\n
+        go get a Glühwein for a dime!\n
+        `
       },
       {
         name: "Stop 1",
         lat: 48.14981706899348,
         lng: 11.585536560654537,
         radius: 30,
-        hint2: `Your tea was warm, a cozy little spark,\n
+        hint: `Your tea was warm, a cozy little spark,\n
         but now seek water running cool and stark.\n
         A narrow stream where crowds would often cheer,\n
         yet today it's quiet — strangely still this year.\n
         Follow the sounds that should be there to dwell,\n
         and find the place where heat meets icy swell.`,
-        hint: `Sucht den Ort, an dem die Ableitung der Surfer eindeutig nicht existiert, weil die Funktion dort permanent springt, runterfällt, hochschnellt und trotzdem irgendwie periodisch aussieht. Ein Ort, der alle Eigenschaften einer nicht-glatten, aber sehr fotogenen Funktion erfüllt.\n
-        \n
-        Timing Hint: Start making your way to the next stop around 17:45
-        `
+        hint2: `<div style="text-align:center;">
+      <img src="eisbachsurfer.png" style="width:200px">
+    </div>`
+
       },
       {
         name: "Stop 2",
         lat: 48.14341536339145,
         lng: 11.587711322580303,
         radius: 40,
-        hint2: `Leave the murmuring waters behind and roam,\n
+        hint: `Leave the murmuring waters behind and roam,\n
         to a garden drawn with balance and calm.\n
         Find 8 paths spreading out like rays,\n
         each pointing where old footsteps used to stray.\n
         Where all directions meet as one,\n
         stand in the center — your journey’s done.`,
-        hint: `Ihr sucht den Punkt, an dem die Stadt kurz innehält: Ein Pavillon als Fixpunkt in einem Meer aus symmetrischen Wegen. Wenn alle Gradienten der Hektik sich vereinigen, zeigt der einzige kritische Punkt im Gebiet genau dorthin.`
+        hint2: `Try using the satellite imagery basemap.
+        `
       },
       {
         name: "Stop 4",
@@ -397,7 +447,10 @@
         where merchants gather with crafts to share.\n
         In the square, a rider stands so tall,\n
         an iron prince who overlooks it all.`,
-        hint: `Wenn ihr den symmetrischen Ruhepunkt verlassen habt, sucht nun einen Ort, an dem die Stadt plötzlich mehr Dimensionen hat: Lichter, Buden, Menschen, Düfte – alles scheint sich zu überlagern wie eine schlecht separierbare Datenwolke. Der Name dieses Platzes erinnert eher an eine bayrische Dynastie, die nicht nur Bayern, sondern auch viele Geschichtsklausuren geprägt hat.`
+        hint: `
+        <div style="text-align:center;">
+      <img src="wittelsbacher.png" style="width:200px">
+    </div>`
       },
       {
         name: "Stop 5",
@@ -410,20 +463,20 @@
         guiding you through streets of brown.\n
         Beside this giant made of stone,\n
         seek warmth where monks once poured their own.`,
-        hint: `Nachdem ihr inzwischen genug Glühwein-Approximationen durchgeführt habt, sucht ihr nun einen Ort, an dem die Wahrscheinlichkeit für warme Speisen mit steigender Gruppengröße gegen 1 konvergiert. Es klingt wie eine Gaststätte in einem Kloster — und mathematisch gesehen ist es der Grenzwert aller Münchner Feierabendfolgen. \n
-        \n
-        Timing Hint: Start making your way to the next stop around 18:45`
+        hint: `<div style="text-align:center;">
+      <img src="monk.png" style="width:200px">
+    </div>
+        `
       },
       {
         name: "Stop 7",
         lat: 48.13858335211532,
         lng: 11.572168352693478,
         radius: 20,
-        hint2: "Congratulations, you made it! Enjoy the CU1.4 Christmas party at Augustiner Klosterwirt!!",
+        hint2: "Congratulations, you made it! Enjoy a fresh beer at Augustiner Klosterwirt!!",
         hint: `<div style="text-align:center;">
       <img src="augustiner_klosterwirt.jpg" style="width:200px">
       <strong>Congratulations, you made it! 🎉</strong><br>
-      Enjoy the CU1.4 Christmas party – you’ve earned it! 🍷✨
     </div>`,
       },
     ];
@@ -432,12 +485,12 @@
     const SECRET_LAT_DEG = 48;
     const SECRET_LAT_MIN = 9;
     const SECRET_LAT_SEC = 22;
-    const SECRET_LAT_SEC_DEC = 104;   // e.g. for 22.7 seconds
+    const SECRET_LAT_SEC_DEC = 104;
 
     const SECRET_LNG_DEG = 11;
     const SECRET_LNG_MIN = 35;
     const SECRET_LNG_SEC = 19;
-    const SECRET_LNG_SEC_DEC = 554;   // e.g. for 19.5 seconds
+    const SECRET_LNG_SEC_DEC = 554;
 
     function parseNumber(value) {
       const normalized = value.trim().replace(',', '.');
